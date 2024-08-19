@@ -4,13 +4,13 @@
 
 ## Overview
 
-This application is designed to help traders generate options strategy recommendations by analyzing the relative performance of the SMH Semiconductor ETF against major market indices. It provides a comparison chart, allows users to fetch opinions from various AI models, and displays detailed stock charts.
+This application is designed to help traders generate options strategy recommendations by analyzing the relative performance of the SMH Semiconductor ETF against major market indices. It provides a comparison chart using TradingView's Advanced Chart widget, allows users to fetch opinions from various AI models, and displays detailed stock charts.
 
 ## Features
 
 - **Major Indices Comparison Chart**: Displays a comparison chart of major indices using TradingView's Advanced Chart widget.
 - **AI Opinions**: Fetches opinions from multiple AI models to analyze relative performance.
-- **Detailed Stock Charts**: Allows users to view detailed charts of individual stocks.
+- **Detailed Stock Charts**: Allows users to view detailed TradingView charts of individual stocks.
 
 ## Getting Started
 
@@ -18,6 +18,7 @@ This application is designed to help traders generate options strategy recommend
 
 - Node.js and npm installed on your machine.
 - API keys for the AI models (OpenAI, Groq, Claude, Gemini) and Polygon.
+- TradingView widget library (included via CDN in the HTML file).
 
 ### Installation
 
@@ -48,9 +49,9 @@ This application is designed to help traders generate options strategy recommend
 
 ## Usage
 
-1. **Comparison Chart**: The main page displays a comparison chart of major indices.
+1. **Comparison Chart**: The main page displays a comparison chart of major indices using the TradingView widget.
 2. **AI Opinions**: Enter system and user prompts, then click on the AI model buttons to fetch opinions.
-3. **Detailed Stock Charts**: Enter a stock symbol and click "Fetch Data" to view a detailed chart of the stock.
+3. **Detailed Stock Charts**: Enter a stock symbol and click "Fetch Data" to view a detailed TradingView chart of the stock.
 
 ## Components
 
@@ -62,7 +63,18 @@ The main application component that handles the following functionalities:
 - **Event Handlers**: Handles input changes, form submissions, and keydown events.
 - **AI Opinions**: Fetches opinions from AI models based on the provided prompts and stock data.
 - **TradingView Chart**: Creates a comparison chart using the TradingView widget.
-- **StockChart Component**: Renders detailed stock charts based on the submitted stock symbol.
+- **TradingViewStockChart Component**: Renders detailed stock charts based on the submitted stock symbol.
+
+### TradingViewStockChart.tsx
+
+A React component that displays stock data using the TradingView Advanced Chart widget.
+
+- **Props**: Accepts a `symbol` prop to specify which stock to display.
+- **Functionality**: 
+  - Uses the TradingView widget library to create an advanced chart.
+  - Configures the chart with daily candles, Heikin-Ashi style, and volume indicator.
+  - Allows symbol changes and drawing on the chart.
+  - Uses a dark theme for better visibility.
 
 ### StockDataService.ts
 
@@ -85,17 +97,16 @@ The application supports multiple AI models:
 - **Claude**: Uses the Claude API for generating opinions.
 - **Gemini**: Uses the Gemini API for generating opinions.
 
-### Chart Colors
+### TradingView Chart Configuration
 
-The chart colors are defined in the `CHART_COLORS` constant:
+The TradingView chart is configured with the following options:
 
-```typescript
-const CHART_COLORS = {
-  background: '#1e1e1e', // Dark background for the chart
-  text: '#d1d4dc',       // Light text color for contrast
-  lines: 'rgba(42, 46, 57, 0)', // Transparent gridlines
-};
-```
+- Dark theme
+- Daily interval
+- Heikin-Ashi candles
+- Volume indicator
+- Symbol change allowed
+- Drawing tools enabled
 
 ### Major Indices
 
