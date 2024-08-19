@@ -2,10 +2,13 @@
  * @file App.tsx
  * @description The main application component that displays a major indices comparison chart
  * and allows users to fetch opinions from various AI models about the chart data.
- * This component fetches historical data for the SMH Semiconductor ETF and uses it to generate AI opinions.
+ * This component fetches historical data for the SMH Semiconductor ETF and uses it to generate AI opinions,
+ * including integration with the Groq API for the Llama3 8b 8192 model.
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import necessary React hooks and components
+// Import necessary React hooks and components
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+// Import custom service for fetching stock data
 import { stockDataService, HistoricalDataPoint } from './stockDataService';
 
 /**
@@ -14,7 +17,7 @@ import { stockDataService, HistoricalDataPoint } from './stockDataService';
  */
 declare global {
   interface Window {
-    TradingView: any;
+    TradingView: any; // Declare TradingView as a property on the global Window object
   }
 }
 
@@ -27,7 +30,7 @@ const CHART_COLORS = {
 
 /**
  * Define the major indices we want to compare
- * @constant
+ * @constant {Array<{symbol: string, description: string}>}
  */
 const MAJOR_INDICES = [
   { symbol: 'SMH', description: 'Semiconductor ETF' },
@@ -39,28 +42,40 @@ const MAJOR_INDICES = [
 
 /**
  * Interface for AI model configurations
- * @interface
+ * @interface AIModel
  */
 interface AIModel {
-  name: string;
-  apiEndpoint: string;
-  apiKey: string;
+  name: string;        // Name of the AI model
+  apiEndpoint: string; // API endpoint for the model
+  apiKey: string;      // API key for authentication
+}
+
+/**
+ * Interface for Groq API chat completion response
+ * @interface GroqChatCompletion
+ */
+interface GroqChatCompletion {
+  choices: Array<{
+    message?: {
+      content: string; // The generated text content
+    };
+  }>;
 }
 
 /**
  * Configuration for different AI models
- * @constant
+ * @constant {AIModel[]}
  */
 const AI_MODELS: AIModel[] = [
   {
     name: 'OpenAI',
     apiEndpoint: 'https://api.openai.com/v1/chat/completions',
-    apiKey: import.meta.env.VITE_OPENAI_API_KEY
+    apiKey: import.meta.env.VITE_OPENAI_API_KEY // Use environment variable for API key
   },
   {
     name: 'Groq',
-    apiEndpoint: 'https://api.groq.com/openai/v1/chat/completions',
-    apiKey: import.meta.env.VITE_GROQ_API_KEY
+    apiEndpoint: '/api/openai/v1/chat/completions', // Use proxy endpoint set up in Vite config
+    apiKey: import.meta.env.VITE_GROQ_API_KEY // Use environment variable for Groq API key
   },
   {
     name: 'Claude',
@@ -89,8 +104,8 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
 
     // Prepare the request body based on the AI model
     let requestBody: any;
-    if (model.name === 'OpenAI' || model.name === 'Groq') {
-      // OpenAI and Groq use a similar API structure
+    if (model.name === 'OpenAI') {
+      // OpenAI API request structure
       requestBody = {
         model: 'gpt-4', // Specify the model to use
         messages: [
@@ -100,25 +115,17 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
         max_tokens: 500,
         temperature: 0.7,
       };
-    } else if (model.name === 'Claude') {
-      // Claude API has a different structure
+    } else if (model.name === 'Groq') {
+      // Groq API request structure
       requestBody = {
-        model: 'claude-2', // Specify the model to use
-        prompt: `${systemPrompt}\n\nHuman: ${fullUserPrompt}\n\nAssistant:`,
-        max_tokens_to_sample: 500,
-        temperature: 0.7,
-      };
-    } else if (model.name === 'Gemini') {
-      // Gemini API has a different structure
-      requestBody = {
-        contents: [
-          { role: 'user', parts: [{ text: systemPrompt }] },
-          { role: 'user', parts: [{ text: fullUserPrompt }] },
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: fullUserPrompt },
         ],
-        generationConfig: {
-          temperature: 0.7,
-          maxOutputTokens: 500,
-        },
+        model: 'llama3-8b-8192', // Specify the Llama3 8b 8192 model
+        max_tokens: 500,
+        temperature: 0.7,
+        stream: false, // Set to false for non-streaming response
       };
     } else {
       throw new Error(`Unsupported AI model: ${model.name}`);
@@ -140,12 +147,12 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
     }
 
     // Parse the JSON response from the API
-    const data = await response.json();
+    const data: GroqChatCompletion = await response.json();
 
     // Extract the AI's opinion based on the model
     let opinion: string;
     if (model.name === 'OpenAI' || model.name === 'Groq') {
-      opinion = data.choices[0]?.message?.content;
+      opinion = data.choices[0]?.message?.content || '';
     } else if (model.name === 'Claude') {
       opinion = data.completion;
     } else if (model.name === 'Gemini') {
@@ -193,38 +200,38 @@ const App: React.FC = () => {
     if (comparisonChartRef.current && window.TradingView) {
       // Create a new TradingView widget
       new window.TradingView.widget({
-        width: '100%',
-        height: 400,
-        symbol: MAJOR_INDICES[0].symbol,
+        width: '100%', // Set the width to 100% of the container
+        height: 400, // Set the height to 400 pixels
+        symbol: MAJOR_INDICES[0].symbol, // Use the first symbol as the main chart
         gridColor: "rgba(0, 0, 0, 0)", // Set grid color to transparent
-        interval: 'D',
-        range: "3M",
-        timezone: 'Etc/UTC',
-        theme: 'dark',
-        style: '3',
-        locale: 'en',
-        toolbar_bg: CHART_COLORS.background,
-        enable_publishing: false,
-        allow_symbol_change: false,
-        container_id: 'comparison-chart',
-        studies: MAJOR_INDICES.slice(1).map(index => ({ id: 'Compare@tv-basicstudies', inputs: { symbol: index.symbol }})),
+        interval: 'D', // Set the interval to daily
+        range: "3M", // Set the range to 3 months
+        timezone: 'Etc/UTC', // Set the timezone to UTC
+        theme: 'dark', // Use the dark theme
+        style: '3', // Use candlestick style
+        locale: 'en', // Set the language to English
+        toolbar_bg: CHART_COLORS.background, // Set the toolbar background color
+        enable_publishing: false, // Disable publishing
+        allow_symbol_change: false, // Disable symbol change
+        container_id: 'comparison-chart', // Set the container ID
+        studies: MAJOR_INDICES.slice(1).map(index => ({ id: 'Compare@tv-basicstudies', inputs: { symbol: index.symbol }})), // Add comparison studies for other indices
         overrides: {
-          "paneProperties.background": CHART_COLORS.background,
-          "paneProperties.vertGridProperties.color": CHART_COLORS.lines,
-          "paneProperties.horzGridProperties.color": CHART_COLORS.lines,
-          "scalesProperties.textColor": CHART_COLORS.text,
-          "mainSeriesProperties.candleStyle.upColor": "#22c55e",
-          "mainSeriesProperties.candleStyle.downColor": "#ef4444",
-          "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
-          "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
+          "paneProperties.background": CHART_COLORS.background, // Set the chart background color
+          "paneProperties.vertGridProperties.color": CHART_COLORS.lines, // Set vertical grid line color
+          "paneProperties.horzGridProperties.color": CHART_COLORS.lines, // Set horizontal grid line color
+          "scalesProperties.textColor": CHART_COLORS.text, // Set scale text color
+          "mainSeriesProperties.candleStyle.upColor": "#22c55e", // Set up candle color
+          "mainSeriesProperties.candleStyle.downColor": "#ef4444", // Set down candle color
+          "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e", // Set up wick color
+          "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444", // Set down wick color
         },
         studies_overrides: {
-          "volume.volume.color.0": "rgba(211, 211, 211, 0.2)",
-          "volume.volume.color.1": "rgba(169, 169, 169, 0.1)",
+          "volume.volume.color.0": "rgba(211, 211, 211, 0.2)", // Set volume up color
+          "volume.volume.color.1": "rgba(169, 169, 169, 0.1)", // Set volume down color
         },
       });
     }
-  }, []);
+  }, []); // Empty dependency array as this function doesn't depend on any props or state
 
   /**
    * Handles fetching an AI opinion
@@ -268,20 +275,24 @@ const App: React.FC = () => {
     return () => {
       document.body.removeChild(script);
     };
-  }, [createComparisonChart]);
+  }, [createComparisonChart]); // Dependency array includes createComparisonChart
 
   // Effect to fetch historical data for the main symbol
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch historical data for the main symbol (SMH)
         const data = await stockDataService.fetchStockData(MAJOR_INDICES[0].symbol);
+        // Update the historicalData state with the fetched data
         setHistoricalData(data);
       } catch (error) {
+        // Log any errors that occur during data fetching
         console.error('Error fetching historical data:', error);
       }
     };
+    // Call the fetchData function
     fetchData();
-  }, []);
+  }, []); // Empty dependency array as this effect should only run once on component mount
 
   return (
     <div className="min-h-screen bg-gray-800 text-white p-8">
