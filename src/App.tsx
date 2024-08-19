@@ -1,16 +1,12 @@
 /**
  * @file App.tsx
- * @description The main application component that displays a major indices comparison chart,
- * allows users to fetch opinions from various AI models about the chart data, and provides
- * functionality to view detailed stock charts. The AI models generate opinions based on actual
- * stock data fetched from Polygon.io.
+ * @description The main application component that displays a major indices comparison chart
+ * and allows users to fetch opinions from various AI models about the chart data.
+ * This component fetches historical data for the SMH Semiconductor ETF and uses it to generate AI opinions.
  */
 
-// Import necessary React hooks and components
-import React, { useState, useCallback, useEffect, useRef } from 'react';
-import StockChart from './StockChart';
+import React, { useState, useEffect, useRef, useCallback } from 'react'; // Import necessary React hooks and components
 import { stockDataService, HistoricalDataPoint } from './stockDataService';
-import { createChart } from 'lightweight-charts';
 
 /**
  * Extend the global Window interface to include the TradingView property.
@@ -22,10 +18,7 @@ declare global {
   }
 }
 
-/**
- * Custom color scheme for the chart
- * @constant
- */
+// Custom color scheme for the chart
 const CHART_COLORS = {
   background: '#1e1e1e', // Dark background for the chart
   text: '#d1d4dc',       // Light text color for contrast
@@ -82,35 +75,15 @@ const AI_MODELS: AIModel[] = [
 ];
 
 /**
- * Fetch stock data from Polygon.io
- * @param {string} symbol - The stock symbol to fetch data for
- * @returns {Promise<HistoricalDataPoint[]>} A promise that resolves to an array of historical data points
- */
-const fetchStockData = async (symbol: string): Promise<HistoricalDataPoint[]> => {
-  try {
-    // Fetch historical data for the given symbol using the stockDataService
-    const historicalData = await stockDataService.fetchStockData(symbol);
-    return historicalData;
-  } catch (error) {
-    // Log any errors that occur during the fetch process
-    console.error('Error fetching stock data:', error);
-    throw error;
-  }
-};
-
-/**
  * Fetch an opinion from an AI model about the displayed chart
  * @param {AIModel} model - The AI model to use
  * @param {string} systemPrompt - The system prompt for the AI
  * @param {string} userPrompt - The user prompt for the AI
- * @param {string} symbol - The stock symbol to fetch data for
+ * @param {HistoricalDataPoint[]} historicalData - The historical data for the stock
  * @returns {Promise<string>} The AI-generated opinion about the chart
  */
-const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: string, symbol: string): Promise<string> => {
+const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: string, historicalData: HistoricalDataPoint[]): Promise<string> => {
   try {
-    // Fetch historical data for the given symbol
-    const historicalData = await fetchStockData(symbol);
-
     // Construct the full user prompt by combining the user prompt and chart data
     const fullUserPrompt = `${userPrompt} Historical Data: ${JSON.stringify(historicalData)}`;
 
@@ -124,7 +97,7 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
           { role: 'system', content: systemPrompt },
           { role: 'user', content: fullUserPrompt },
         ],
-        max_tokens: 150,
+        max_tokens: 500,
         temperature: 0.7,
       };
     } else if (model.name === 'Claude') {
@@ -132,7 +105,7 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
       requestBody = {
         model: 'claude-2', // Specify the model to use
         prompt: `${systemPrompt}\n\nHuman: ${fullUserPrompt}\n\nAssistant:`,
-        max_tokens_to_sample: 150,
+        max_tokens_to_sample: 500,
         temperature: 0.7,
       };
     } else if (model.name === 'Gemini') {
@@ -144,7 +117,7 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
         ],
         generationConfig: {
           temperature: 0.7,
-          maxOutputTokens: 150,
+          maxOutputTokens: 500,
         },
       };
     } else {
@@ -195,81 +168,27 @@ const getAIOpinion = async (model: AIModel, systemPrompt: string, userPrompt: st
  * @returns {JSX.Element} The rendered App component
  */
 const App: React.FC = () => {
-  // State to store the entered stock symbol
-  const [symbol, setSymbol] = useState<string>('');
-
-  // State to store the submitted symbol (for rendering the detailed chart)
-  const [submittedSymbol, setSubmittedSymbol] = useState<string>('');
-
   // State to store the AI-generated opinions
   const [aiOpinions, setAiOpinions] = useState<Record<string, string>>({});
 
   // State to store the system and user prompts
-  const [systemPrompt, setSystemPrompt] = useState<string>('You only opine on options strategies after considering the recent relative performance of the SMH Semiconductor ETF against the broader market.');
-  const [userPrompt, setUserPrompt] = useState<string>('Considering the ' +  MAJOR_INDICES.map(index => index.symbol).join(', ') + ' tickers, which is most bullish? Explain which is most liquid? Investing in which ticker would an investor attain the greatest Sharpe Ratio? What options strategies are best based on historical volatility, recent price action, and trading volume? What is the 1 ATR target price and the closest out of the money strike for a bullish trader that prefers long options? What about the optimal ITM strike a bullish trader that wants to sell premium using a short put vertical?');
+  const [systemPrompt, setSystemPrompt] = useState<string>(
+    'You are an educator that never gives financial advice. However, your strengths are in calculating technical indicators such as RSI, MACD, ATR, Bollinger Bands, etc. from basic historical data retrieved from Polygon.io. You have a strong preference to teach options trading strategies to trend and momentum traders. Unfortunately, you do not have access to implied volatility (IV) data but use your knowledge and expertise to leverage historical volatility (HV) calculations to gauge IV. You always prefer teaching the value of trading the SMH Semiconductor ETF over other financial instruments. However, you always caution those that listen to you to remember that liquidity is king for options traders (especially if they have trading targets like a 1 ATR move). Finally, you care about risk managment and optimizing the Sharpe Ratio of all trades. Consequently, you teach traders to purchase cheaper options (at least two) to lower the risk and maximize the reward.'
+  );
+  const [userPrompt, setUserPrompt] = useState<string>(
+    `Considering the ${MAJOR_INDICES[0].symbol} ticker data in this prompt, is ${MAJOR_INDICES[0].symbol} bullish? Explain whether a momentum trader or trend trader would find ${MAJOR_INDICES[0].symbol} appealing or not. Does trading volume support options strategies? What options strategies are best based on historical volatility, recent price action, and trading volume? What is the 1 ATR target price for a bullish or bearish trend/momentum trader that prefers long options? What about momentum/trend traders that prefer to sell premium?`
+  );
 
-  // Reference to the input element for focus management
-  const inputRef = useRef<HTMLInputElement>(null);
+  // State to store the historical data for the main symbol
+  const [historicalData, setHistoricalData] = useState<HistoricalDataPoint[]>([]);
 
   // Reference to the chart container for the major indices comparison
   const comparisonChartRef = useRef<HTMLDivElement>(null);
 
-  // Reference to the volume chart container
-  const volumeChartRef = useRef<HTMLDivElement>(null);
-
-  /**
-   * Handles the input change event
-   * @param {React.ChangeEvent<HTMLInputElement>} e - The input change event
-   */
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    // Convert the input to uppercase and update the symbol state
-    setSymbol(e.target.value.toUpperCase());
-  };
-
-  /**
-   * Handles the form submission
-   * @param {React.FormEvent<HTMLFormElement>} e - The form submission event
-   */
-  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-    // Prevent the default form submission behavior
-    e.preventDefault();
-    // Set the submitted symbol to trigger the detailed chart update
-    setSubmittedSymbol(symbol);
-  };
-
-  /**
-   * Handles keydown events globally
-   * @param {KeyboardEvent} e - The keydown event
-   */
-  const handleGlobalKeyDown = useCallback((e: KeyboardEvent) => {
-    // Check if the active element is not an input or textarea
-    if (
-      document.activeElement?.tagName !== 'INPUT' &&
-      document.activeElement?.tagName !== 'TEXTAREA'
-    ) {
-      // If the key is a letter or number, add it to the symbol
-      if (/^[a-zA-Z0-9]$/.test(e.key)) {
-        setSymbol(prevSymbol => (prevSymbol + e.key).toUpperCase());
-        // Focus the input
-        inputRef.current?.focus();
-      }
-      // If the key is backspace, remove the last character
-      else if (e.key === 'Backspace') {
-        setSymbol(prevSymbol => prevSymbol.slice(0, -1));
-        // Focus the input
-        inputRef.current?.focus();
-      }
-      // If the key is Enter, submit the form
-      else if (e.key === 'Enter') {
-        setSubmittedSymbol(symbol);
-      }
-    }
-  }, [symbol]);
-
   /**
    * Creates the comparison chart using TradingView widget
    */
-  const createComparisonChart = () => {
+  const createComparisonChart = useCallback(() => {
     // Check if the chart container and TradingView library are available
     if (comparisonChartRef.current && window.TradingView) {
       // Create a new TradingView widget
@@ -288,16 +207,11 @@ const App: React.FC = () => {
         enable_publishing: false,
         allow_symbol_change: false,
         container_id: 'comparison-chart',
-        studies: [
-          { id: 'Compare@tv-basicstudies', inputs: { symbol: MAJOR_INDICES[1].symbol }},
-          { id: 'Compare@tv-basicstudies', inputs: { symbol: MAJOR_INDICES[2].symbol }},
-          { id: 'Compare@tv-basicstudies', inputs: { symbol: MAJOR_INDICES[3].symbol }},
-          { id: 'Compare@tv-basicstudies', inputs: { symbol: MAJOR_INDICES[4].symbol }},
-        ],
+        studies: MAJOR_INDICES.slice(1).map(index => ({ id: 'Compare@tv-basicstudies', inputs: { symbol: index.symbol }})),
         overrides: {
           "paneProperties.background": CHART_COLORS.background,
-          "paneProperties.vertGridProperties.color": "rgba(0, 0, 0, 0)",
-          "paneProperties.horzGridProperties.color": "rgba(0, 0, 0, 0)",
+          "paneProperties.vertGridProperties.color": CHART_COLORS.lines,
+          "paneProperties.horzGridProperties.color": CHART_COLORS.lines,
           "scalesProperties.textColor": CHART_COLORS.text,
           "mainSeriesProperties.candleStyle.upColor": "#22c55e",
           "mainSeriesProperties.candleStyle.downColor": "#ef4444",
@@ -310,52 +224,7 @@ const App: React.FC = () => {
         },
       });
     }
-  };
-
-  /**
-   * Creates the volume chart using Lightweight Charts
-   */
-  const createVolumeChart = async () => {
-    if (volumeChartRef.current) {
-      // Create a new chart instance
-      const chart = createChart(volumeChartRef.current, {
-        width: volumeChartRef.current.clientWidth,
-        height: 300,
-        layout: {
-          background: { type: 'solid', color: '#1e1e1e' },
-          textColor: '#d1d4dc',
-        },
-        grid: {
-          vertLines: { visible: false },
-          horzLines: { visible: false },
-        },
-      });
-
-      // Add a histogram series to the chart for volume data
-      const volumeSeries = chart.addHistogramSeries({
-        color: '#22c55e',
-        lineWidth: 2,
-        priceFormat: {
-          type: 'volume',
-        },
-        priceLineVisible: false,
-      });
-
-      // Initialize an array to store volume data
-      const volumeData: { time: string; value: number }[] = [];
-
-      // Fetch and process volume data for each major index
-      for (const index of MAJOR_INDICES) {
-        const historicalData = await fetchStockData(index.symbol);
-        historicalData.forEach(data => {
-          volumeData.push({ time: data.time, value: data.volume });
-        });
-      }
-
-      // Set the processed volume data to the chart series
-      volumeSeries.setData(volumeData);
-    }
-  };
+  }, []);
 
   /**
    * Handles fetching an AI opinion
@@ -363,8 +232,8 @@ const App: React.FC = () => {
    */
   const handleFetchAIOpinion = async (model: AIModel) => {
     try {
-      // Fetch the AI opinion
-      const opinion = await getAIOpinion(model, systemPrompt, userPrompt, submittedSymbol);
+      // Fetch the AI opinion using the historical data
+      const opinion = await getAIOpinion(model, systemPrompt, userPrompt, historicalData);
 
       // Update the aiOpinions state with the new opinion
       setAiOpinions(prevOpinions => ({
@@ -381,23 +250,6 @@ const App: React.FC = () => {
       }));
     }
   };
-
-  // Effect to add and remove the global keydown event listener
-  useEffect(() => {
-    // Add the keydown event listener when the component mounts
-    window.addEventListener('keydown', handleGlobalKeyDown);
-
-    // Remove the event listener when the component unmounts
-    return () => {
-      window.removeEventListener('keydown', handleGlobalKeyDown);
-    };
-  }, [handleGlobalKeyDown]);
-
-  // Effect to focus the input when the component mounts
-  useEffect(() => {
-    // Focus the input element when the component mounts
-    inputRef.current?.focus();
-  }, []);
 
   // Effect to load TradingView script and create the comparison chart
   useEffect(() => {
@@ -416,11 +268,19 @@ const App: React.FC = () => {
     return () => {
       document.body.removeChild(script);
     };
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, [createComparisonChart]);
 
-  // Effect to create the volume chart
+  // Effect to fetch historical data for the main symbol
   useEffect(() => {
-    createVolumeChart();
+    const fetchData = async () => {
+      try {
+        const data = await stockDataService.fetchStockData(MAJOR_INDICES[0].symbol);
+        setHistoricalData(data);
+      } catch (error) {
+        console.error('Error fetching historical data:', error);
+      }
+    };
+    fetchData();
   }, []);
 
   return (
@@ -441,31 +301,28 @@ const App: React.FC = () => {
         <div id="comparison-chart" ref={comparisonChartRef} className="w-full h-[400px]" />
       </div>
 
-      {/* Prompt Input Fields */}
+      {/* Prompt Input / Text Area Fields */}
       <div className="mb-8">
         <h2 className="text-2xl font-bold mb-4">AI Prompts</h2>
         <div className="flex flex-col space-y-4">
-          <input
-            type="text"
+          <textarea
             value={systemPrompt}
             onChange={(e) => setSystemPrompt(e.target.value)}
             placeholder="System Prompt"
-            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
           />
-          <input
-            type="text"
+          <textarea
             value={userPrompt}
             onChange={(e) => setUserPrompt(e.target.value)}
             placeholder="User Prompt"
-            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="bg-gray-700 text-white px-4 py-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 h-32"
           />
         </div>
       </div>
 
       {/* AI Opinion Buttons */}
       <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Get AI Opinions</h2>
-        <div className="flex space-x-4">
+        <div className="flex flex-wrap gap-4">
           {AI_MODELS.map((model) => (
             <button
               key={model.name}
@@ -482,44 +339,9 @@ const App: React.FC = () => {
       {Object.entries(aiOpinions).map(([modelName, opinion]) => (
         <div key={modelName} className="mb-8">
           <h2 className="text-2xl font-bold mb-4">{modelName} Opinion</h2>
-          <p className="bg-gray-700 p-4 rounded-lg">{opinion}</p>
+          <p className="bg-gray-700 p-4 rounded-lg whitespace-pre-wrap">{opinion}</p>
         </div>
       ))}
-
-      {/* Form for entering the stock symbol */}
-      <form onSubmit={handleSubmit} className="mb-8">
-        <input
-          ref={inputRef}
-          type="text"
-          value={symbol}
-          onChange={handleInputChange}
-          placeholder="Enter stock symbol (e.g., AAPL)"
-          className="bg-gray-700 text-white px-4 py-2 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          className="bg-blue-500 hover:bg-blue-600 px-4 py-2 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          Fetch Data
-        </button>
-      </form>
-
-      {/* Render the StockChart component if a symbol has been submitted */}
-      {submittedSymbol && (
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold mb-4">Detailed Chart: {submittedSymbol}</h2>
-          <StockChart
-            symbol={submittedSymbol}
-            apiKey={import.meta.env.VITE_POLYGON_API_KEY}
-          />
-        </div>
-      )}
-
-      {/* Volume Chart */}
-      <div className="mb-8">
-        <h2 className="text-2xl font-bold mb-4">Comparative Trading Volumes</h2>
-        <div id="volume-chart" ref={volumeChartRef} className="w-full h-[300px]" />
-      </div>
     </div>
   );
 };
