@@ -38,9 +38,9 @@ export const MAJOR_INDICES = [
       apiKey: import.meta.env.VITE_GROQ_API_KEY
     },
     {
-        name: 'Claude',
-      apiEndpoint: 'https://api.anthropic.com/v1/complete',
-        apiKey: import.meta.env.VITE_CLAUDE_API_KEY
+      name: 'Claude',
+      apiEndpoint: '/claude-api/v1/complete',
+      apiKey: import.meta.env.VITE_CLAUDE_API_KEY
     },
     {
       name: 'Gemini',
@@ -87,4 +87,4 @@ What is the 1 ATR target price for bullish and bearish scenarios? How might this
   /**
    * Number of historical data points to use
    */
-  export const HISTORY_LIMIT = 90;
+  export const HISTORY_LIMIT = 100;
