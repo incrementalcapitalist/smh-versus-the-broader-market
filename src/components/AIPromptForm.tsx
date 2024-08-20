@@ -16,7 +16,7 @@ interface AIPromptFormProps {
  * @returns {JSX.Element} The rendered form component
  */
 const AIPromptForm: React.FC<AIPromptFormProps> = ({ onSubmit }) => {
-  const [selectedModel, setSelectedModel] = useState<string>(AI_MODELS[0].name);
+  const [selectedModel, setSelectedModel] = useState<string>(AI_MODELS[1].name);
   const [systemPrompt, setSystemPrompt] = useState<string>(DEFAULT_SYSTEM_PROMPT);
   const [userPrompt, setUserPrompt] = useState<string>(DEFAULT_USER_PROMPT);
 
@@ -33,12 +33,12 @@ const AIPromptForm: React.FC<AIPromptFormProps> = ({ onSubmit }) => {
     <form onSubmit={handleSubmit} className="mb-8">
       <h2 className="text-2xl font-bold mb-4">AI Prompts</h2>
       <div className="mb-4">
-        <label htmlFor="ai-model" className="block mb-2">Select AI Model:</label>
+        <label htmlFor="ai-model" className="block mb-2">Model:</label>
         <select
           id="ai-model"
           value={selectedModel}
           onChange={(e) => setSelectedModel(e.target.value)}
-          className="w-full p-2 bg-gray-700 text-white rounded"
+          className="block w-full p-2.5 bg-gray-700 border border-gray-600 text-white rounded-lg focus:ring-blue-500 focus:border-blue-500 appearance-none cursor-pointer pr-8"
         >
           {AI_MODELS.map((model) => (
             <option key={model.name} value={model.name}>{model.name}</option>
@@ -67,7 +67,7 @@ const AIPromptForm: React.FC<AIPromptFormProps> = ({ onSubmit }) => {
         type="submit"
         className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded"
       >
-        Generate AI Opinion
+        Generate Opinion
       </button>
     </form>
   );
