@@ -22,7 +22,7 @@ interface AIOpinionDisplayProps {
 const AIOpinionDisplay: React.FC<AIOpinionDisplayProps> = ({ opinions }) => {
   return (
     <div className="mt-8">
-      <h2 className="text-2xl font-bold mb-4">AI-Generated Opinions</h2>
+      <h2 className="text-2xl font-bold mb-4">Opinions</h2>
       {opinions.length === 0 ? (
         <p className="text-gray-400">No opinions generated yet. Use the form above to get AI opinions.</p>
       ) : (
