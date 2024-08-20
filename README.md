@@ -9,15 +9,16 @@ This application is designed to help traders generate options strategy recommend
 ## Features
 
 - **Major Indices Comparison Chart**: Displays a comparison chart of major indices using TradingView's Advanced Chart widget.
-- **AI Opinions**: Fetches opinions from multiple AI models to analyze relative performance.
+- **AI Opinions**: Fetches and displays opinions from multiple AI models to analyze relative performance.
 - **Detailed Stock Charts**: Allows users to view detailed TradingView charts of individual stocks.
+- **Historical Data Analysis**: Utilizes historical stock data to generate insights and recommendations.
 
 ## Getting Started
 
 ### Prerequisites
 
 - Node.js and npm installed on your machine.
-- API keys for the AI models (OpenAI, Groq, Claude, Gemini) and Polygon.
+- API keys for the AI models (OpenAI, Groq, Claude, Gemini) and Polygon.io.
 - TradingView widget library (included via CDN in the HTML file).
 
 ### Installation
@@ -57,34 +58,56 @@ This application is designed to help traders generate options strategy recommend
 
 ### App.tsx
 
-The main application component that handles the following functionalities:
+The main application component that orchestrates the application's functionality:
 
-- **State Management**: Manages the state for stock symbols, AI opinions, and prompts.
-- **Event Handlers**: Handles input changes, form submissions, and keydown events.
-- **AI Opinions**: Fetches opinions from AI models based on the provided prompts and stock data.
-- **TradingView Chart**: Creates a comparison chart using the TradingView widget.
-- **TradingViewStockChart Component**: Renders detailed stock charts based on the submitted stock symbol.
+- Manages global state (historical data, AI opinions, etc.)
+- Renders child components (ChartComponent, AIPromptForm, AIOpinionDisplay)
+- Handles data fetching and error states
+
+### ChartComponent.tsx
+
+Renders the TradingView comparison chart for major indices:
+
+- Uses TradingView widget to create an interactive chart
+- Configures chart options and styles
+
+### AIPromptForm.tsx
+
+Provides a form for users to input prompts for AI models:
+
+- Manages local state for system and user prompts
+- Triggers AI opinion fetching
+
+### AIOpinionDisplay.tsx
+
+Displays AI-generated opinions:
+
+- Renders opinions from different AI models
+- Handles cases where no opinions are available
 
 ### TradingViewStockChart.tsx
 
-A React component that displays stock data using the TradingView Advanced Chart widget.
+Displays detailed stock charts for individual symbols:
 
-- **Props**: Accepts a `symbol` prop to specify which stock to display.
-- **Functionality**: 
-  - Uses the TradingView widget library to create an advanced chart.
-  - Configures the chart with daily candles, Heikin-Ashi style, and volume indicator.
-  - Allows symbol changes and drawing on the chart.
-  - Uses a dark theme for better visibility.
+- Uses TradingView widget for advanced charting capabilities
+- Configures chart with custom indicators and styles
 
-### StockDataService.ts
+## Services
 
-A service for fetching and processing stock data from the Polygon.io API.
+### stockDataService.ts
 
-- **fetchStockData**: Fetches historical stock data.
-- **fetchShortVolumeData**: Fetches short volume data.
-- **calculateHeikinAshi**: Calculates Heikin-Ashi data from regular candlestick data.
-- **calculateAnchoredVWAP**: Calculates Anchored VWAP (Volume Weighted Average Price).
-- **getChartOptions**: Gets the chart options for a standard chart setup.
+Handles fetching and processing of stock data:
+
+- Fetches historical stock data from Polygon.io API
+- Calculates technical indicators (Heikin-Ashi, VWAP)
+- Provides methods for data manipulation and analysis
+
+### aiService.ts
+
+Manages interactions with various AI models:
+
+- Sends requests to AI APIs (OpenAI, Groq, Claude, Gemini)
+- Formats prompts and processes AI responses
 
 ## Configuration
 
@@ -124,7 +147,12 @@ const MAJOR_INDICES = [
 
 ## Contributing
 
-Contributions are welcome! Please open an issue or submit a pull request.
+Contributions are welcome! Please open an issue or submit a pull request. When contributing, please:
+
+1. Clearly describe the problem or feature you're addressing.
+2. Provide test cases for new features or bug fixes.
+3. Ensure your code follows the existing style and structure of the project.
+4. Update the README.md if you're adding new features or changing existing functionality.
 
 ## License
 
@@ -136,4 +164,4 @@ The GPL v3 license enforces strong copyleft requirements and ensures that all de
 
 ## Contact
 
-For any questions or feedback, please contact [incrementalcapitalist@hotmail.com](mailto:incrementalcapitalist@hotmail.com).
+For any questions, feedback, or contributions, please contact [incrementalcapitalist@hotmail.com](mailto:incrementalcapitalist@hotmail.com).
