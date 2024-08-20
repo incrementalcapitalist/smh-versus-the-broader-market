@@ -119,6 +119,7 @@ The application supports multiple AI models:
 - **Groq**: Uses the Groq API for generating opinions.
 - **Claude**: Uses the Claude API for generating opinions.
 - **Gemini**: Uses the Gemini API for generating opinions.
+- **Mistral**: Uses the Gemini API for generating opinions.
 
 ### TradingView Chart Configuration
 

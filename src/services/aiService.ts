@@ -73,6 +73,17 @@ export const getAIOpinion = async (
       model.apiEndpoint += `?key=${model.apiKey}`;
       delete headers['Authorization'];
       break;
+    case 'Mistral':
+      requestBody = {
+        model: "mistral-tiny", // or whichever model you're using
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: fullUserPrompt },
+        ],
+        max_tokens: 500,
+        temperature: 0.7,
+      };
+      break;
     default:
       throw new Error(`Unsupported AI model: ${model.name}`);
   }
@@ -103,6 +114,9 @@ export const getAIOpinion = async (
         break;
       case 'Gemini':
         opinion = (data as any).candidates[0]?.content?.parts[0]?.text || '';
+        break;
+      case 'Mistral':
+        opinion = data.choices[0]?.message?.content || '';
         break;
       default:
         throw new Error(`Unsupported AI model: ${model.name}`);
